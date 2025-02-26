@@ -1,0 +1,78 @@
+version: '3.7'
+
+services:
+  confluence_mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: confluence
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: password
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    networks:
+      - jira-confluence-net
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  confluence:
+    image: atlassian/confluence-server:6.15.6
+    environment:
+      CONFLUENCE_DB_TYPE: mysql
+      CONFLUENCE_DB_HOST: confluence_mysql
+      CONFLUENCE_DB_PORT: 3306
+      CONFLUENCE_DB_NAME: confluence
+      CONFLUENCE_DB_USER: dbuser
+      CONFLUENCE_DB_PASSWORD: password
+      CONFLUENCE_DB_URL: jdbc:mysql://confluence_mysql:3306/confluence?characterEncoding=utf8mb4&useUnicode=true&useSSL=false
+    ports:
+      - "8090:8090"
+    networks:
+      - jira-confluence-net
+    volumes:
+      - confluence_data:/var/atlassian/confluence
+      - ./mysql-connector-java-5.1.47.jar:/opt/atlassian/confluence/confluence/WEB-INF/lib/mysql-connector-java-5.1.48.jar
+
+  jira:
+    image: atlassian/jira-software:8.3.0
+    environment:
+      ATL_JDBC_DRIVER: com.mysql.jdbc.Driver
+      ATL_JDBC_URL: jdbc:mysql://address=(protocol=tcp)(host=jira_mysql)(port=3306)/jira?useUnicode=true&characterEncoding=UTF8&sessionVariables=default_storage_engine=InnoDB
+      #address=(protocol=tcp)(host=jira_mysql)(port=3306)(useSSL=no)/jira?useUnicode=true&characterEncoding=UTF8&sessionVariables=default_storage_engine=InnoDB
+      ATL_JDBC_USER: dbuser
+      ATL_JDBC_PASSWORD: password
+    ports:
+      - "8080:8080"
+    networks:
+      - jira-confluence-net
+    volumes:
+      - jira_data:/var/atlassian/jira
+      - ./mysql-connector-java-5.1.48.jar:/opt/atlassian/jira/atlassian-jira/WEB-INF/lib/mysql-connector-java-5.1.48.jar
+
+  jira_mysql:
+    image: mysql:5.7.26
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: jira
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: password
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"  # Change port to avoid conflict with confluence MySQL
+    networks:
+      - jira-confluence-net
+    volumes:
+#      - jira_mysql_data:/var/lib/mysql
+#      - ./my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./certs:/etc/mysql/certs  # Mount the certs directory
+volumes:
+  mysql_data:
+  confluence_data:
+  jira_data:
+  jira_mysql_data:
+
+networks:
+  jira-confluence-net:
