@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  work:
+    build:
+      context: .          # Directory containing the Dockerfile
+      dockerfile: Dockerfile  # Name of the Dockerfile
+    ports:
+      - "5901:5901"      # Map host port to container port
+      - "2022:22"      # Map host port to container port
+      - "80:80"      # Map host port to container port
+      - "443:443"      # Map host port to container port
+      - "3000:3000"      # Map host port to container port
+    volumes:
+      - .:/app           # Mount local directory to container
+      - /c:/c
+      - ./scripts/nginx.conf:/etc/nginx/nginx.conf
+    environment:
+      - FLASK_ENV=development
+      - DISPLAY=host.docker.internal:0
+      - USER=root
+      
+
+
+networks:
+  work-net:
+      driver: bridge

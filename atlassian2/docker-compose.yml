@@ -1,0 +1,94 @@
+version: '3.7'
+
+services:
+      
+  confluence_mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: confluence
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: password
+      MYSQL_CHARSET: utf8
+      MYSQL_COLLATION: utf8_bin
+    ports:
+      - "3306:3306"
+    networks:
+      - jira-confluence-net
+
+
+  confluence:
+    image: atlassian/confluence-server:6.15.6
+    environment:
+      CONFLUENCE_DB_TYPE: mysql
+      CONFLUENCE_DB_HOST: confluence_mysql
+      CONFLUENCE_DB_PORT: 3306
+      CONFLUENCE_DB_NAME: confluence
+      CONFLUENCE_DB_USER: dbuser
+      CONFLUENCE_DB_PASSWORD: password
+      MYSQL_CHARSET: utf8
+      MYSQL_COLLATION: utf8_bin
+      CONFLUENCE_DB_URL: jdbc:mysql://confluence_mysql:3306/confluence?characterEncoding=utf8mb4&useUnicode=true&useSSL=false
+    ports:
+      - "8090:8090"
+    networks:
+      - jira-confluence-net
+    volumes:
+      - ./mysql-connector-java-5.1.47.jar:/opt/atlassian/confluence/confluence/WEB-INF/lib/mysql-connector-java-5.1.47.jar
+      #CREATE DATABASE confluence CHARACTER SET utf8 COLLATE utf8_bin;
+      #jdbc:mysql://confluence_mysql:3306/confluence?useSSL=false&sessionVariables=transaction_isolation='READ-COMMITTED'
+  jira:
+    image: atlassian/jira-software:8.3.0
+    environment:
+      ATL_TOMCAT_PORT: 8181
+      ATL_JDBC_DRIVER: com.mysql.jdbc.Driver
+      ATL_JDBC_URL: jdbc:mysql://address=(protocol=tcp)(host=jira_mysql)(port=3306)/jira?useUnicode=true&characterEncoding=UTF8&sessionVariables=default_storage_engine=InnoDB
+      #address=(protocol=tcp)(host=jira_mysql)(port=3306)(useSSL=no)/jira?useUnicode=true&characterEncoding=UTF8&sessionVariables=default_storage_engine=InnoDB
+      ATL_JDBC_USER: dbuser
+      ATL_JDBC_PASSWORD: password
+    ports:
+      - "8181:8181"
+    networks:
+      - jira-confluence-net
+    volumes:
+      - ./mysql-connector-java-5.1.48.jar:/opt/atlassian/jira/atlassian-jira/WEB-INF/lib/mysql-connector-java-5.1.48.jar
+
+  jira_mysql:
+    image: mysql:5.7.26
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: jira
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: password
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    networks:
+      - jira-confluence-net
+
+  postgres:
+    image: postgres:alpine
+    environment:
+      POSTGRES_DB: jsm
+      POSTGRES_USER: jsm
+      POSTGRES_PASSWORD: password
+    networks:
+      - jira-confluence-net
+
+  jsm:  # Changed service name to jsm
+    image: atlassian/jira-servicemanagement:4.3.0
+    environment:
+      - ATL_JDBC_URL=jdbc:postgresql://postgres:5432/jsm
+      - ATL_TOMCAT_PORT=9080
+      - ATL_JDBC_USER=jsm
+      - ATL_JDBC_PASSWORD=password
+      - JVM_MINIMUM_MEMORY=512m
+      - JVM_MAXIMUM_MEMORY=2048m
+    ports:
+      - "9080:9080"
+    depends_on:
+      - postgres
+    networks:
+      - jira-confluence-net
+
+networks:
+  jira-confluence-net:
